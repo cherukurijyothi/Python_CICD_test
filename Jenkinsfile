@@ -1,22 +1,37 @@
 pipeline {
     agent any
-
+ 
+    environment {
+        IMAGE_NAME = "fastapi_student_app"
+        CONTAINER_NAME = "fastapi_student_container"
+        APP_PORT = "8000"
+    }
     stages {
-        stage('Checkout') {
+        stage('Clone Repository') {
             steps {
-                git 'https://github.com/cherukurijyothi/Python_CICD_test.git'
+                git credentialsId: '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',    // Use your Jenkins credential ID for GitHub PAT here
+                    branch: 'main',
+                    url: "https://github.com/cherukurijyothi/Python_CICD_test.git"
             }
         }
-
-        stage('Install Dependencies') {
+        stage('Build Docker Image') {
             steps {
-                sh 'pip install -r requirements.txt'
+                sh 'docker build -t $IMAGE_NAME .'  
             }
         }
-
-        stage('Run Tests') {
+        stage('Stop & Remove Old Container') {
             steps {
-                sh 'pytest'
+                sh '''
+                docker stop $CONTAINER_NAME || true
+                docker rm $CONTAINER_NAME || true
+                '''
+            }
+        }
+        stage('Run Docker Container') {
+            steps {
+                sh '''
+                docker run -d --name $CONTAINER_NAME -p $APP_PORT:$APP_PORT $IMAGE_NAME
+                '''
             }
         }
     }
