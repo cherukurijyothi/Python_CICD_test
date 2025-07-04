@@ -10,15 +10,19 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                echo "📥 Checking out source code..."
-                git url: 'https://github.com/cherukurijyothi/Python_CICD_test.git', 
-                    credentialsId: 'cherukurijyothi'
+                checkout scm
+                echo "📋 Latest commit info:"
+                sh 'git log -1 --oneline'
+                echo "📂 Workspace contents:"
+                sh 'ls -la'
+                echo "📄 First 10 lines of main.py:"
+                sh 'head -10 main.py'
             }
         }
 
         stage('Verify Docker') {
             steps {
-                echo "🔍 Verifying Docker installation..."
+                echo "🔍 Verifying Docker installation and user permissions..."
                 sh 'docker --version'
                 sh 'whoami'
             }
@@ -26,19 +30,22 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                echo "🔨 Building Docker image: $IMAGE_NAME"
-                sh 'ls -la'  // Check contents to confirm Dockerfile is present
-                sh 'docker build -t $IMAGE_NAME .'
+                echo "🔨 Building Docker image: ${IMAGE_NAME}"
+                sh "docker build --no-cache -t ${IMAGE_NAME} ."
             }
         }
 
         stage('Replace Running Container') {
             steps {
-                echo "♻️ Replacing running container: $CONTAINER_NAME"
+                echo "♻️ Replacing running container: ${CONTAINER_NAME}"
                 sh '''
-                    docker stop $CONTAINER_NAME || true
-                    docker rm $CONTAINER_NAME || true
-                    docker run -d --name $CONTAINER_NAME -p $APP_PORT:$APP_PORT $IMAGE_NAME
+                    docker stop ${CONTAINER_NAME} || true
+                    docker rm ${CONTAINER_NAME} || true
+                    docker run -d --name ${CONTAINER_NAME} -p ${APP_PORT}:${APP_PORT} ${IMAGE_NAME}
+                    echo "🚀 Current running containers:"
+                    docker ps -a
+                    echo "🖼️ Docker images with name ${IMAGE_NAME}:"
+                    docker images | grep ${IMAGE_NAME}
                 '''
             }
         }
@@ -46,7 +53,7 @@ pipeline {
 
     post {
         success {
-            echo "✅ Deployment succeeded — App is live on port $APP_PORT"
+            echo "✅ Deployment succeeded — App is live on port ${APP_PORT}"
         }
         failure {
             echo "❌ Deployment failed — Check above logs for details"
