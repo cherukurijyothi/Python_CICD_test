@@ -1,41 +1,43 @@
 pipeline {
     agent any
- 
+
     environment {
-        IMAGE_NAME = "fastapi"
-        CONTAINER_NAME = "fastapi_container"
+        IMAGE_NAME = "fastapi-jenkins"
+        CONTAINER_NAME = "fastapi_app"
         APP_PORT = "8000"
     }
-    tages {
-        stage('Clone Repository') {
+
+    stages {
+        stage('Checkout') {
             steps {
-                git credentialsId: 'Kjyothi',  // Your GitHub PAT credentials ID in Jenkins
-                    branch: 'main',
-                    url: "https://github.com/cherukurijyothi/Python_CICD_test.git"
+                git url: 'https://github.com/cherukurijyothi/Python_CICD_test.git', 
+                    credentialsId: 'cherukurijyothi'
             }
         }
-        stage('Build Docker Image') {
+
+        stage('Build Image') {
             steps {
-                sh 'docker build -t $IMAGE_NAME .'  
+                sh 'docker build -t $IMAGE_NAME .'
             }
         }
-        stage('stop & Remove Old container') {
+
+        stage('Replace Container') {
             steps {
                 sh '''
-                docker stop $CONTAINER_NAME || true
-                docker rm $CONTAINER_NAME || true
+                    docker stop $CONTAINER_NAME || true
+                    docker rm $CONTAINER_NAME || true
+                    docker run -d --name $CONTAINER_NAME -p $APP_PORT:$APP_PORT $IMAGE_NAME
                 '''
             }
         }
-        stage('Run Docker Container') {
-            steps {
-                sh '''
-                docker run -d --name $CONTAINER_NAME -p $APP_PORT:$APP_PORT $IMAGE_NAME
-                '''
-            }
+    }
+
+    post {
+        success {
+            echo "✅ Deployment succeeded; app is live on port $APP_PORT"
         }
- 
-   
+        failure {
+            echo "❌ Deployment failed; check logs"
+        }
     }
 }
- 
